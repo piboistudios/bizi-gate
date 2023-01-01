@@ -1,0 +1,73 @@
+steps:
+  # - name: node
+  # args: ["replace-npmrc", "$PROJECT_ID"]
+  - name: gcr.io/cloud-builders/npm
+    args:
+      ["run", "artifactregistry-login", "--", '--credential-config="./.npmrc"']
+  - name: node
+    args: ["print-npmrc"]
+
+  - name: gcr.io/cloud-builders/npm
+    args: ["install", "yargs", "debug", "handlebars", "handlebars-helpers"]
+  - name: node
+    env:
+      - "DEBUG=*"
+    args:
+      - "gke/compile-k8s"
+      - "--in=gke/Service.template.yaml"
+      - "--out=gke/resources/Service.yaml"
+  - name: node
+    env:
+      - "DEBUG=*"
+    args:
+      - "gke/compile-k8s"
+      - "--in=gke/ManagedCert.template.yaml"
+      - '--hostname="${_HOSTNAME}"'
+      - "--out=gke/resources/ManagedCert.yaml"
+  - name: node
+    env:
+      - "DEBUG=*"
+    args:
+      - "gke/compile-k8s"
+      - "--projectId=$PROJECT_ID"
+      - "--in=gke/Deployment.template.yaml"
+      - "--out=gke/resources/Deployment.yaml"
+      - "--tag=$SHORT_SHA"
+      - '--set-env="DEBUG=${_DEBUG}"'
+      - '--set-env="DB_USER=${_DB_USER}"'
+      - '--set-env="DB_PASS=${_DB_PASS}"'
+      - '--set-env="DB_ADDR=${_DB_ADDR}"'
+      - '--set-env="DB_PORT=${_DB_PORT}"'
+      - '--set-env="DB_NAME=${_DB_NAME}"'
+      - '--set-env="DB_AUTH_SOURCE=${_DB_AUTH_SOURCE}"'
+      - '--set-env="DEBUG_DEPTH=${_DEBUG_DEPTH"'
+      - '--set-env="THIS_HOST=${_THIS_HOST}"'
+      - '--set-env="THIS_PORT=${_THIS_PORT}"'
+      - '--set-env="ACME_DIRECTORY=${_ACME_DIRECTORY"'
+      - '--set-env="ACME_ENVIRONMENT=${_ACME_ENVIRONMENT"'
+      - '--set-env="PORTS=${_PORTS}"'
+      - '--set-env="PORT=8082"'
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "--build-arg"
+      - "PROJECT_ID=$PROJECT_ID"
+      - "--build-arg"
+      - "PORT=${_PORT}"
+      - "-t"
+      - "us-central1-docker.pkg.dev/$PROJECT_ID/bizi-docker-images/bizi-gate:$SHORT_SHA"
+      - "."
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "us-central1-docker.pkg.dev/$PROJECT_ID/bizi-docker-images/bizi-gate:$SHORT_SHA",
+      ]
+  - name: "gcr.io/cloud-builders/gke-deploy"
+    args:
+      - run
+      - --filename=gke/resources/
+      - --location=us-central1-a
+      - --cluster=$BRANCH_NAME-$PROJECT_ID
+images:
+  - "us-central1-docker.pkg.dev/$PROJECT_ID/bizi-docker-images/bizi-gate:$SHORT_SHA"
