@@ -264,7 +264,7 @@ async function main() {
 
             var address_type = net.isIP(thisHost);
             const resourceType = RESOURCE_TYPES[address_type];
-
+            if (resourceType === 'CNAME') return;
             const existingRecordset = await DnsRecordset.findOne({
                 stub,
                 zone: dnsZone.id,
