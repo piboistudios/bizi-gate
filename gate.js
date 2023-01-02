@@ -269,8 +269,6 @@ async function main() {
                 stub,
                 zone: dnsZone.id,
                 resourceType,
-                ttl: 300,
-                "records.value": thisHost
             });
             if (!existingRecordset) {
 
