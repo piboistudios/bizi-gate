@@ -154,13 +154,14 @@ async function main() {
         if (err) return reject(err);
         resolve(pems);
     }));
+    const thisHosts = [...process.env.THIS_HOST.split(','), 'localhost']
     function mkTlsServer(port, deaf) {
         !deaf && logger.info("Starting TLS server on port", port);
         const server = tls.createServer({
             async SNICallback(servername, cb) {
-                logger.info("Initiate SNI...", servername);
+                logger.info("Initiate SNI...", { servername, thisHosts });
                 let key, cert;
-                if ([...process.env.THIS_HOST.split(','), 'localhost'].indexOf(servername) !== -1) {
+                if (thisHosts.indexOf(servername) !== -1) {
                     key = pems.private;
                     cert = pems.cert;
 
