@@ -40,6 +40,7 @@ steps:
       - '--set-env="DB_ADDR=${_DB_ADDR}"'
       - '--set-env="DB_PORT=${_DB_PORT}"'
       - '--set-env="DB_NAME=${_DB_NAME}"'
+      - '--set-env="HOSTNAME=${_HOSTNAME}"'
       - '--set-env="DB_AUTH_SOURCE=${_DB_AUTH_SOURCE}"'
       - '--set-env="DEBUG_DEPTH=${_DEBUG_DEPTH"'
       - '--set-env="THIS_HOST=${_THIS_HOST}"'

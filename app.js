@@ -146,6 +146,14 @@ async function main() {
             return e;
         }
     }
+    var selfsigned = require('selfsigned');
+    const attrs = [{ name: 'commonName', value: process.env.HOSTNAME }];
+
+    /**@type {import('selfsigned').GenerateResult} */
+    const pems = await new Promise((resolve, reject) => selfsigned.generate(attrs, { days: 90 }, (err, pems) => {
+        if (err) return reject(err);
+        resolve(pems);
+    }));
     function mkTlsServer(port, deaf) {
         !deaf && logger.info("Starting TLS server on port", port);
         const server = tls.createServer({
@@ -153,8 +161,8 @@ async function main() {
                 logger.info("Initiate SNI...", servername);
                 let key, cert;
                 if ([...process.env.THIS_HOST.split(','), 'localhost'].indexOf(servername) !== -1) {
-                    key = readFileSync('./keys/spdy-key.pem');
-                    cert = readFileSync('./keys/spdy-cert.pem');
+                    key = pems.private;
+                    cert = pems.cert;
 
                 } else {
 
