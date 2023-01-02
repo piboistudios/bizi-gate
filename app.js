@@ -72,7 +72,7 @@ async function main() {
                 socket.emit('data', data);
             });
         });
-        !deaf && server.listen(port);
+        !deaf && srv.listen(port);
 
         return srv;
 
