@@ -45,8 +45,8 @@ steps:
       - '--set-env="DEBUG_DEPTH=${_DEBUG_DEPTH"'
       - '--set-env="THIS_HOST=${_THIS_HOST}"'
       - '--set-env="THIS_PORT=${_THIS_PORT}"'
-      - '--set-env="ACME_DIRECTORY=${_ACME_DIRECTORY"'
-      - '--set-env="ACME_ENVIRONMENT=${_ACME_ENVIRONMENT"'
+      - '--set-env="ACME_DIRECTORY=${_ACME_DIRECTORY}"'
+      - '--set-env="ACME_ENVIRONMENT=${_ACME_ENVIRONMENT}"'
       - '--set-env="PORTS=${_PORTS}"'
       - '--set-env="PORT=8082"'
   - name: "gcr.io/cloud-builders/docker"
