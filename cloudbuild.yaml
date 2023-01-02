@@ -15,15 +15,16 @@ steps:
     args:
       - "gke/compile-k8s"
       - "--in=gke/Service.template.yaml"
+      - '--load-balancer-ip="${_LOAD_BALANCER_IP}"'
       - "--out=gke/resources/Service.yaml"
-  - name: node
-    env:
-      - "DEBUG=*"
-    args:
-      - "gke/compile-k8s"
-      - "--in=gke/ManagedCert.template.yaml"
-      - '--hostname="${_HOSTNAME}"'
-      - "--out=gke/resources/ManagedCert.yaml"
+  # - name: node
+  #   env:
+  #     - "DEBUG=*"
+  #   args:
+  #     - "gke/compile-k8s"
+  #     - "--in=gke/ManagedCert.template.yaml"
+  #     - '--hostname="${_HOSTNAME}"'
+  #     - "--out=gke/resources/ManagedCert.yaml"
   - name: node
     env:
       - "DEBUG=*"
