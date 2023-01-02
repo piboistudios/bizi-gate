@@ -2,7 +2,7 @@ const { mkLogger } = require("./logger");
 const { all: allUnbound } = Promise;
 const all = allUnbound.bind(Promise);
 const http = require('http');
-
+const net = require('net');
 const tls = require('tls');
 const logger = mkLogger('app');
 
@@ -50,16 +50,16 @@ async function main() {
     function mkGateSrv(port, deaf = true) {
         const srv = http.createServer(gateRouter);
 
-        !deaf && srv.listen(port);
+        // !deaf && srv.listen(port);
         return srv;
     }
 
     const gateSrv = mkGateSrv();
 
     function mkPlainWebServer(port, deaf) {
-        logger.info("Starting well-known server on port", port);
+        logger.info("Starting plain web server on port", port);
         const tlsSrv = mkTlsServer(port, true);
-        const srv = http.createServer();
+        const srv = net.createServer();
         srv.on('connection', function (socket) {
             socket.once('data', function (data) {
                 if (data[0] == 0x16 || data[0] == 0x80 || data[0] == 0x00) {
@@ -69,7 +69,7 @@ async function main() {
                     logger.debug('>> no TLS detected');
                     gateSrv.emit('connection', socket);
                 }
-                socket.emit('data', data);
+                socket.push(data);
             });
         });
         !deaf && srv.listen(port);
@@ -147,12 +147,12 @@ async function main() {
         }
     }
     function mkTlsServer(port, deaf) {
-        logger.info("Starting TLS server on port", port);
+        !deaf && logger.info("Starting TLS server on port", port);
         const server = tls.createServer({
             async SNICallback(servername, cb) {
                 logger.info("Initiate SNI...", servername);
                 let key, cert;
-                if (port === process.env.THIS_PORT && [...process.env.THIS_HOST.split(','), 'localhost'].indexOf(servername) !== -1) {
+                if ([...process.env.THIS_HOST.split(','), 'localhost'].indexOf(servername) !== -1) {
                     key = readFileSync('./keys/spdy-key.pem');
                     cert = readFileSync('./keys/spdy-cert.pem');
 
@@ -180,7 +180,7 @@ async function main() {
         });
         server.on('secureConnection', async sock => {
             logger.debug("socket servername (SNI):", sock.servername)
-            if (port === process.env.THIS_PORT && ['localhost', process.env.THIS_HOST].indexOf(sock.servername) !== -1) {
+            if (['localhost', process.env.THIS_HOST].indexOf(sock.servername) !== -1) {
                 gateSrv.emit('connection', sock);
                 return;
             }

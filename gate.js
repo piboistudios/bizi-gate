@@ -286,12 +286,12 @@ async function main() {
                     ],
                     routingPolicy: 0
                 });
-                log.debug("Saving new DNS recordset...", {thisHost, ...recordset.toJSON()});
+                log.debug("Saving new DNS recordset...", { thisHost, ...recordset.toJSON() });
                 await recordset.save();
                 log.info("DNS Recordset saved for", hostname, "to point to", `${thisHost}:${process.env.THIS_PORT}`);
 
             } else {
-                log.debug("Using existing recordset...", {thisHost});
+                log.debug("Using existing recordset...", { thisHost });
             }
         }))
         /**@todo start an acme rotation for registration; retrying with back-off indefinitely, max back-off 30 mins */
@@ -314,13 +314,14 @@ async function main() {
     const bodyParser = require('body-parser');
     const router = express();
     router.use(bodyParser.json());
+    router.get("/", (req, res) => res.status(200).json("OK"))
     router.get("/.well-known/acme-challenge/:token", async (req, res) => {
         const { token } = req.params;
         const acmeChallenge = await AcmeChallenge.findOne({
             token
         });
         if (!acmeChallenge) {
-            return res.status(404).send("NOT FOUND");
+            return res.status(404).end("NOT FOUND");
         }
         res.status(200).send(acmeChallenge.keyAuthorization)
     });
