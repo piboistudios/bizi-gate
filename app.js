@@ -56,7 +56,7 @@ async function main() {
 
     const gateSrv = mkGateSrv();
 
-    function mkPlainWebServer(port) {
+    function mkPlainWebServer(port, deaf) {
         logger.info("Starting well-known server on port", port);
         const tlsSrv = mkTlsServer(port, true);
         const srv = http.createServer();
@@ -72,6 +72,9 @@ async function main() {
                 socket.emit('data', data);
             });
         });
+        !deaf && server.listen(port);
+
+        return srv;
 
     }
     function parseName(domain) {
