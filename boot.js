@@ -14,7 +14,7 @@ logger.info("Mongo options:", options);
 mongoose.connect(dsn, options)
     .then(async cnx => {
         logger.sub('mongoose')
-            .debug("Mongoose connection:", cnx);
+            // .debug("Mongoose connection:", cnx);
         logger.info("Connected to database");
         if (!process.env.NO_START) {
 
