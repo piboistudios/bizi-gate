@@ -19,12 +19,14 @@ async function main() {
     const acme = require('acme-client');
     /**@type {import('axios').AxiosStatic} */
     const axiosStat = require('axios');
+    const qs = require('qs');
     const axios = axiosStat.create({
         validateStatus: () => true,
         headers: {
             "X-Api-Key": "gabedev-tech.QeenbamVk4McTG",
             "Content-Type": "application/vnd.api+json"
-        }
+        },
+        paramsSerializer: (params) => qs.stringify(params, { encode: false }),
     })
     function mkErr(msg, res) {
         logger.error("made error for res:", {
