@@ -224,7 +224,8 @@ async function main() {
 
             logger.debug("Attempting to establish downstream connection to", hostname, "on port", registration.dest.port);
             const pipeSock = tls.connect(registration.dest.port, hostname, {
-                servername: hostname
+                servername: hostname,
+                rejectUnauthorized: false
             });
             sock
                 .pipe(pipeSock)
