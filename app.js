@@ -188,7 +188,7 @@ async function main() {
             }
         });
         server.on('secureConnection', async sock => {
-            logger.debug("socket servername (SNI):", sock.servername, socko.address())
+            logger.debug("socket servername (SNI):", sock.servername, sock.address())
             if (thisHosts.indexOf(sock.servername) !== -1) {
                 gateSrv.emit('connection', sock);
                 return;
