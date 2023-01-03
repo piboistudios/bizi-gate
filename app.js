@@ -112,7 +112,7 @@ async function main() {
         });
         if (!vHost) throw new Error("No Virtual host");
         const registration = await Registration.findOne({
-            "src.host": vhost.id,
+            "src.host": vHost.id,
             "src.port": port
         });
         if (!registration) throw new Error("No port registration");
