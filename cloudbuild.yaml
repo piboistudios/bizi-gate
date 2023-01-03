@@ -36,6 +36,7 @@ steps:
       - "--tag=$SHORT_SHA"
       - '--set-env="DNS_MODE=${_DNS_MODE}"'
       - '--set-env="DEBUG=${_DEBUG}"'
+      - '--set-env="DEBUG_DEPTH=5"'
       - '--set-env="DB_USER=${_DB_USER}"'
       - '--set-env="DB_PASS=${_DB_PASS}"'
       - '--set-env="DB_ADDR=${_DB_ADDR}"'

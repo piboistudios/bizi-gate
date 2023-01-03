@@ -5,7 +5,7 @@
     "async": "^3.2.4",
     "body-parser": "^1.20.1",
     "callsite": "^1.0.0",
-    "debug": "^4.3.4",
+    "debug": "github:calvintwr/debug",
     "express": "^4.18.2",
     "generate-key": "^0.0.6",
     "json-rpc-2.0": "^1.4.2",
