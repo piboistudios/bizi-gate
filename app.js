@@ -193,7 +193,6 @@ async function main() {
             upstream.on('error', e => {
                 upLog
                     .error(e);
-                upstream.close();
             });
             logger.debug("socket servername (SNI):", upstream.servername, upstream.address())
             if (thisHosts.indexOf(upstream.servername) !== -1) {
@@ -236,8 +235,7 @@ async function main() {
             downstream.on('error', e => {
                 downLog
                     .fatal(e);
-                upstream.close();
-                downstream.close();
+                upstream.emit('error', e);
             })
             // sock.on('end', () => {
             //     pipeSock
