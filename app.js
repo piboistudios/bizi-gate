@@ -193,6 +193,7 @@ async function main() {
             upstream.on('error', e => {
                 upLog
                     .error(e);
+                upstream.close();
             });
             logger.debug("socket servername (SNI):", upstream.servername, upstream.address())
             if (thisHosts.indexOf(upstream.servername) !== -1) {
@@ -223,7 +224,7 @@ async function main() {
             }
 
             logger.debug("Attempting to establish downstream connection to", registration.dest.host, "on port", registration.dest.port);
-            const downstream = tls.connect(registration.dest.port, registration.dest.host, {
+            const downstream = net.connect(registration.dest.port, registration.dest.host, {
                 // servername: registration.dest.host,
                 rejectUnauthorized: false
             });
@@ -234,7 +235,9 @@ async function main() {
 
             downstream.on('error', e => {
                 downLog
-                    .error(e);
+                    .fatal(e);
+                upstream.close();
+                downstream.close();
             })
             // sock.on('end', () => {
             //     pipeSock
