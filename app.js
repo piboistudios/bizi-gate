@@ -188,6 +188,12 @@ async function main() {
             }
         });
         server.on('secureConnection', async sock => {
+            const downLog = logger.sub('secureConnect:' + sock.servername + ':' + port + ':' + 'downstream')
+            const upLog = logger.sub('secureConnect:' + sock.servername + ':' + port + ':' + 'upstream')
+            sock.on('error', e => {
+                upLog
+                    .error(e);
+            });
             logger.debug("socket servername (SNI):", sock.servername, sock.address())
             if (thisHosts.indexOf(sock.servername) !== -1) {
                 gateSrv.emit('connection', sock);
@@ -215,17 +221,18 @@ async function main() {
             if (!hostname) {
                 return sock.destroy(fmtErr("Invalid hostname:", { zone, stub, hostname, registration }));
             }
-            const pipeSock = tls.connect(registration.dest.port, hostname);
+
+            logger.debug("Attempting to establish downstream connection to", hostname, "on port", registration.dest.port);
+            const pipeSock = tls.connect(registration.dest.port, hostname, {
+                servername: hostname
+            });
             sock
                 .pipe(pipeSock)
                 .pipe(sock);
 
-            sock.on('error', e => {
-                logger.sub('secureConnect:' + sock.servername + ':' + port + ':' + 'upstream')
-                    .error(e);
-            });
+
             pipeSock.on('error', e => {
-                logger.sub('secureConnect:' + sock.servername + ':' + port + ':' + 'downstream')
+                downLog
                     .error(e);
             })
             // sock.on('end', () => {
