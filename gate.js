@@ -307,8 +307,8 @@ async function main() {
         const certFile = await File.write({
             filename: hostname + '.cert.pem'
         }, Readable.from(pems.cert));
-        vhost.cert = certFile;
-        vhost.key = keyFile;
+        vhost.cert = certFile.id;
+        vhost.key = keyFile.id;
         await vhost.save();
     })
     const express = require('express');
