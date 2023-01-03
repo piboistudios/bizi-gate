@@ -187,49 +187,49 @@ async function main() {
                 cb(null, ctx);
             }
         });
-        server.on('secureConnection', async sock => {
-            const downLog = logger.sub('secureConnect:' + sock.servername + ':' + port + ':' + 'downstream')
-            const upLog = logger.sub('secureConnect:' + sock.servername + ':' + port + ':' + 'upstream')
-            sock.on('error', e => {
+        server.on('secureConnection', async upstream => {
+            const downLog = logger.sub('secureConnect:' + upstream.servername + ':' + port + ':' + 'downstream')
+            const upLog = logger.sub('secureConnect:' + upstream.servername + ':' + port + ':' + 'upstream')
+            upstream.on('error', e => {
                 upLog
                     .error(e);
             });
-            logger.debug("socket servername (SNI):", sock.servername, sock.address())
-            if (thisHosts.indexOf(sock.servername) !== -1) {
-                gateSrv.emit('connection', sock);
+            logger.debug("socket servername (SNI):", upstream.servername, upstream.address())
+            if (thisHosts.indexOf(upstream.servername) !== -1) {
+                gateSrv.emit('connection', upstream);
                 return;
             }
-            const registration = registrations.get(sock.servername + ':' + port);
+            const registration = registrations.get(upstream.servername + ':' + port);
             if (!registration) {
-                return sock.destroy(fmtErr("No registration for: " + sock.servername + ':' + port));
+                return upstream.destroy(fmtErr("No registration for: " + upstream.servername + ':' + port));
             }
             /**@type {import('./types').VHost} */
             const vHost = registration.src.host;
             if (!vHost) {
-                return sock.destroy(fmtErr("No virtual host for: " + sock.servername));
+                return upstream.destroy(fmtErr("No virtual host for: " + upstream.servername));
             }
             !vHost.populated('zone') && await vHost.populate('zone');
             /**@type {import('./types').DnsZone} */
             const dnsZone = vHost.zone;
             if (!dnsZone) {
-                return sock.destroy(fmtErr("No DNS Zone found."));
+                return upstream.destroy(fmtErr("No DNS Zone found."));
             }
-            // sock.au
+            // upstream.au
             const zone = dnsZone.dnsName;
             const stub = vHost.stub;
             const hostname = [stub, zone].filter(Boolean).join('.');
             if (!hostname) {
-                return sock.destroy(fmtErr("Invalid hostname:", { zone, stub, hostname, registration }));
+                return upstream.destroy(fmtErr("Invalid hostname:", { zone, stub, hostname, registration }));
             }
 
-            logger.debug("Attempting to establish downstream connection to", hostname, "on port", registration.dest.port);
-            const pipeSock = tls.connect(registration.dest.port, hostname, {
-                servername: hostname,
+            logger.debug("Attempting to establish downstream connection to", registration.dest.host, "on port", registration.dest.port);
+            const downstream = tls.connect(registration.dest.port, registration.dest.host, {
+                servername: registration.dest.host,
                 rejectUnauthorized: false
             });
-            sock
-                .pipe(pipeSock)
-                .pipe(sock);
+            upstream
+                .pipe(downstream)
+                .pipe(upstream);
 
 
             pipeSock.on('error', e => {
