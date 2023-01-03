@@ -162,6 +162,7 @@ async function main() {
                             logger.fatal(err);
                             throw err;
                         }
+                        await new Promise((resolve, reject) => setTimeout(() => resolve(), 1000 * 60 * 1));
                     }
 
                 },

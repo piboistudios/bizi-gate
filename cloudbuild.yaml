@@ -34,6 +34,7 @@ steps:
       - "--in=gke/Deployment.template.yaml"
       - "--out=gke/resources/Deployment.yaml"
       - "--tag=$SHORT_SHA"
+      - '--set-env="DNS_MODE=${_DNS_MODE}"'
       - '--set-env="DEBUG=${_DEBUG}"'
       - '--set-env="DB_USER=${_DB_USER}"'
       - '--set-env="DB_PASS=${_DB_PASS}"'
