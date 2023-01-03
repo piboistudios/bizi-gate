@@ -224,7 +224,7 @@ async function main() {
 
             logger.debug("Attempting to establish downstream connection to", registration.dest.host, "on port", registration.dest.port);
             const downstream = tls.connect(registration.dest.port, registration.dest.host, {
-                servername: registration.dest.host,
+                // servername: registration.dest.host,
                 rejectUnauthorized: false
             });
             upstream
