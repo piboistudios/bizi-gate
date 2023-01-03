@@ -232,7 +232,7 @@ async function main() {
                 .pipe(upstream);
 
 
-            pipeSock.on('error', e => {
+            downstream.on('error', e => {
                 downLog
                     .error(e);
             })
