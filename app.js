@@ -221,9 +221,13 @@ async function main() {
                 .pipe(sock);
 
             sock.on('error', e => {
-                logger.sub('secureConnect:' + sock.servername + ':' + port + ':' + 'sock')
+                logger.sub('secureConnect:' + sock.servername + ':' + port + ':' + 'upstream')
                     .error(e);
             });
+            pipeSock.on('error', e => {
+                logger.sub('secureConnect:' + sock.servername + ':' + port + ':' + 'downstream')
+                    .error(e);
+            })
             // sock.on('end', () => {
             //     pipeSock
             // })
