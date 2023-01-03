@@ -54,7 +54,7 @@ async function main() {
                 accountKey: await acme.crypto.createPrivateKey(),
                 backoffAttempts: 32,
                 backoffMax: 60 * 1000 * 120 + 1,
-                backoffMin: 60 * 1000
+                backoffMin: 10 * 1000
             });
             const { DNS_MODE } = process.env;
             // if (!DNS_MODE) throw "not_implemented: http-01 challenge";
