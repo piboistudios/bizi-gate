@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ packageJson.name }}
+  name: {{ packageJson.name }}-{{group}}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ packageJson.name }}
+      app: {{ packageJson.name }}-{{group}}
   template:
     metadata:
       labels:
-        app: {{ packageJson.name }}
+        app: {{ packageJson.name }}-{{group}}
     spec:
       hostname: {{packageJson.name}}
       # initContainers:

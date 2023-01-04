@@ -53,6 +53,7 @@ steps:
       - '--set-env="THIS_PORT=${_THIS_PORT}"'
       - '--set-env="ACME_DIRECTORY=${_ACME_DIRECTORY}"'
       - '--set-env="ACME_ENVIRONMENT=${_ACME_ENVIRONMENT}"'
+      - '--group="${_GROUP}"'
       - '--set-env="PORTS=${_PORTS}"'
       - '--set-env="PORT=8082"'
       - '--ports="${_PORTS}"'

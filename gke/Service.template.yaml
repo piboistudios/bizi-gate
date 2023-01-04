@@ -9,7 +9,7 @@ spec:
   externalTrafficPolicy: Local
   loadBalancerIP: {{loadBalancerIp}}
   selector:
-    app: {{packageJson.name}}
+    app: {{packageJson.name}}-{{group}}
   ports:
   {{#each ports}}
   - name: port-{{this}}
