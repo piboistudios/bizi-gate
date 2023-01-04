@@ -46,9 +46,18 @@ async function main() {
      */
     const registrations = new QuickLRU({ maxSize: MAX_REGISTRATIONS, maxAge: 1000 * 60 * 5 });
     const gateRouter = await require('./gate');
+    const thisHosts = [...process.env.THIS_HOST.split(','), 'localhost']
 
     function mkGateSrv(port, deaf = true) {
-        const srv = http.createServer(gateRouter);
+        const srv = http.createServer((req, res) => {
+            if (thisHosts.includes(req.headers.host)) {
+                return gateRouter(req, res)
+            }
+            res.writeHead(302, {
+                location: `https://${req.headers.host}${req.url}`,
+            });
+            res.end();
+        });
 
         // !deaf && srv.listen(port);
         return srv;
@@ -154,7 +163,6 @@ async function main() {
         if (err) return reject(err);
         resolve(pems);
     }));
-    const thisHosts = [...process.env.THIS_HOST.split(','), 'localhost']
     function mkTlsServer(port, deaf) {
         !deaf && logger.info("Starting TLS server on port", port);
         const server = tls.createServer({
