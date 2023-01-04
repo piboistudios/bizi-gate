@@ -217,7 +217,7 @@ async function main() {
                     .error(e);
             });
             logger.debug("socket servername (SNI):", upstream.servername, upstream.address())
-            if (thisHosts.indexOf(upstream.servername) !== -1) {
+            if (!upstream.servername || thisHosts.indexOf(upstream.servername) !== -1) {
                 gateSrv.emit('connection', upstream);
                 return;
             }
