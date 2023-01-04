@@ -212,18 +212,22 @@ async function main() {
             }
             const registration = registrations.get(upstream.servername + ':' + port);
             if (!registration) {
-                return upstream.destroy(fmtErr("No registration for: " + upstream.servername + ':' + port));
+
+                upLog.fatal(fmtErr("No registration for: " + upstream.servername + ':' + port));
+                return upstream.destroy();
             }
             /**@type {import('./types').VHost} */
             const vHost = registration.src.host;
             if (!vHost) {
-                return upstream.destroy(fmtErr("No virtual host for: " + upstream.servername));
+                upLog.fatal(fmtErr("No virtual host for: " + upstream.servername));
+                return upstream.destroy();
             }
             !vHost.populated('zone') && await vHost.populate('zone');
             /**@type {import('./types').DnsZone} */
             const dnsZone = vHost.zone;
             if (!dnsZone) {
-                return upstream.destroy(fmtErr("No DNS Zone found."));
+                upLog.fatal(fmtErr("No DNS Zone found."));
+                return upstream.destroy();
             }
             // upstream.au
             const zone = dnsZone.dnsName;
@@ -235,7 +239,7 @@ async function main() {
             logger.debug("Attempting to establish downstream connection to", registration.dest.host, "on port", registration.dest.port);
             const proto = registration.dest.tlsTermination ? tls : net;
 
-            
+
             let servername;
             if (proto === tls && !net.isIP(registration.dest.host)) servername = registration.dest.host;
 
