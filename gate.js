@@ -253,7 +253,7 @@ async function main() {
         }
         return { stub, zone };
     }
-    RPC.addMethod('gate.registration.complete', async ({
+    rpc.addMethod('gate.registration.complete', async ({
         gateRegistration: gateRegistrationId
     }) => {
         const log = logger.sub("gate.registration.complete");
