@@ -7,7 +7,9 @@ var schema = new mongoose.Schema({
         required: true,
         type: {
             host: { required: true, type: String },
-            port: { required: true, type: Number }
+            port: { required: true, type: Number },
+            protocol: { required: true, type: String, default: "TCP" },
+            tlsTermination: { required: true, type: Boolean, default: true }
         }
     },
     src: {

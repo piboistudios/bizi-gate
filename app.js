@@ -29,6 +29,8 @@ async function main() {
      *      dest: {
      *          host: string,
      *          port: number,
+     *          protocol: String,
+     *          tlsTermination: Boolean
      *      },
      *      src: {
      *          host: {
@@ -122,7 +124,8 @@ async function main() {
         if (!vHost) throw new Error("No Virtual host");
         const registration = await Registration.findOne({
             "src.host": vHost.id,
-            "src.port": port
+            "src.port": port,
+            protocol: "TCP"
         });
         if (!registration) throw new Error("No port registration");
         registrations.set(regKey, registration);
@@ -229,10 +232,14 @@ async function main() {
             if (!hostname) {
                 return upstream.destroy(fmtErr("Invalid hostname:", { zone, stub, hostname, registration }));
             }
-            let servername;
-            if (!net.isIP(registration.dest.host)) servername = registration.dest.host;
             logger.debug("Attempting to establish downstream connection to", registration.dest.host, "on port", registration.dest.port);
-            const downstream = tls.connect(registration.dest.port, registration.dest.host, {
+            const proto = registration.dest.tlsTermination ? tls : net;
+
+            
+            let servername;
+            if (proto === tls && !net.isIP(registration.dest.host)) servername = registration.dest.host;
+
+            const downstream = proto.connect(registration.dest.port, registration.dest.host, {
                 servername,
                 rejectUnauthorized: false
             });
