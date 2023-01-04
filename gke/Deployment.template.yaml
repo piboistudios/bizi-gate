@@ -27,7 +27,7 @@ spec:
           image: us-central1-docker.pkg.dev/{{ projectId }}/bizi-docker-images/{{ packageJson.name}}:{{tag}}
           ports:
             {{#each ports}}
-            - name: port-{{@index}}
+            - name: port-{{this}}
               protocol: TCP
               containerPort: {{this}}
             {{/each}}

@@ -12,7 +12,7 @@ spec:
     app: {{packageJson.name}}
   ports:
   {{#each ports}}
-  - name: port-{{@index}}
+  - name: port-{{this}}
     protocol: TCP
     port: {{this}}
     targetPort: {{this}}
