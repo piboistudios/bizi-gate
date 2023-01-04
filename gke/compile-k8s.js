@@ -18,6 +18,7 @@ const compiled = handlebars.compile(template);
 async function main() {
 
     const pkgJson = require('../package.json');
+    const ports = argv.ports && argv.ports.split(' ');
     const environmentVariables = !argv["set-env"] ? [] : argv["set-env"].map(str => str.split('=')).map(([key, value]) => ({ key, value: value.replace(/\\/gi, '\\\\') }));
     debug({ environmentVariables });
     argv.out.split('/').reduce((part, current, index) => {
@@ -30,6 +31,7 @@ async function main() {
         packageJson: pkgJson,
         environmentVariables,
         ...argv,
+        ports,
         acmeDomain: argv.acmeDomain && argv.acmeDomain.replace(/\./gi, '-'),
         domainDashed: argv.domain && argv.domain.replace(/\./gi, '-'),
         docsDomainDashed: argv.docsDomain && argv.docsDomain.replace(/\./gi, '-')

@@ -1,6 +1,8 @@
 const async = require('async');
 const net = require('net');
 const { Readable } = require('stream');
+const Endpoint = require('./models/gate.endpoint');
+const Registration = require('./models/gate.registration');
 const RESOURCE_TYPES = {
     0: "CNAME",
     4: "A",
@@ -239,6 +241,71 @@ async function main() {
 
     const { JSONRPCServer, createJSONRPCErrorResponse } = require('json-rpc-2.0')
     const rpc = new JSONRPCServer();
+    async function getDnsName(vhost) {
+        const stub = vhost.stub;
+        log.debug("Populating zone data...");
+        await vhost.populate('zone');
+        /**@type {import('./types').DnsZone} */
+        const dnsZone = vhost.zone;
+        log.debug("DNS Zone Record:", dnsZone);
+        if (!dnsZone) {
+            throw "Non-existent DNS Zone assigned to virtual host for port registration.";
+        }
+        return { stub, zone };
+    }
+    RPC.addMethod('gate.registration.complete', async ({
+        gateRegistration: gateRegistrationId
+    }) => {
+        const log = logger.sub("gate.registration.complete");
+
+        const gateRegistration = await Registration.findById(gateRegistrationId);
+        if (!gateRegistration) {
+            throw "Non-existent gate registration";
+        }
+        await gateRegistration.populate('src.host');
+        const vhost = gateRegistration.src.host;
+        const endpoint = await Endpoint.findOne({
+            ports: gateRegistration.src.port
+        });
+        if (!endpoint) {
+            throw "No endpoint hosting port. Try another port."
+        }
+        const hostname = await getDnsName(vhost);
+
+        const ip = endpoint.host;
+        var address_type = net.isIP(ip);
+        const resourceType = RESOURCE_TYPES[address_type];
+        if (resourceType === 'CNAME') {
+            log.fatal("Invalid endpoint host:", ip);
+            throw "Endpoint misconfigured; please contact hostmaster@bizi.ly"
+        }
+        const existingRecordset = await DnsRecordset.findOne({
+            stub,
+            zone: dnsZone.id,
+            resourceType,
+        });
+        if (!existingRecordset) {
+
+            const recordset = new DnsRecordset({
+                stub,
+                zone: dnsZone.id,
+                resourceType,
+                ttl: 300,
+                records: [
+                    {
+                        value: ip
+                    }
+                ],
+                routingPolicy: 0
+            });
+            log.debug("Saving new DNS recordset...", { ip, ...recordset.toJSON() });
+            await recordset.save();
+            log.info("DNS Recordset saved for", hostname, "to point to", `${ip}:${process.env.THIS_PORT}`);
+
+        } else {
+            log.debug("Using existing recordset...", { ip });
+        }
+    });
     rpc.addMethod("vhost.registration.complete", async ({
         vhost: vhostId
     }) => {
@@ -250,51 +317,10 @@ async function main() {
         if (!vhost) {
             throw "Non-existent virtual host assigned to port registration.";
         }
-        const stub = vhost.stub;
-        log.debug("Populating zone data...");
-        await vhost.populate('zone');
-        /**@type {import('./types').DnsZone} */
-        const dnsZone = vhost.zone;
-        log.debug("DNS Zone Record:", dnsZone);
-        if (!dnsZone) {
-            throw "Non-existent DNS Zone assigned to virtual host for port registration.";
-        }
 
 
-        const zone = dnsZone.dnsName;
-        const hostname = [stub, zone].filter(Boolean).join('.');
-        await Promise.all(process.env.THIS_HOST.split(',').map(async thisHost => {
+        const hostname = await getDnsName(vhost);
 
-            var address_type = net.isIP(thisHost);
-            const resourceType = RESOURCE_TYPES[address_type];
-            if (resourceType === 'CNAME') return;
-            const existingRecordset = await DnsRecordset.findOne({
-                stub,
-                zone: dnsZone.id,
-                resourceType,
-            });
-            if (!existingRecordset) {
-
-                const recordset = new DnsRecordset({
-                    stub,
-                    zone: dnsZone.id,
-                    resourceType,
-                    ttl: 300,
-                    records: [
-                        {
-                            value: thisHost
-                        }
-                    ],
-                    routingPolicy: 0
-                });
-                log.debug("Saving new DNS recordset...", { thisHost, ...recordset.toJSON() });
-                await recordset.save();
-                log.info("DNS Recordset saved for", hostname, "to point to", `${thisHost}:${process.env.THIS_PORT}`);
-
-            } else {
-                log.debug("Using existing recordset...", { thisHost });
-            }
-        }))
         /**@todo start an acme rotation for registration; retrying with back-off indefinitely, max back-off 30 mins */
         const pems = await async.retry({
             times: 8,

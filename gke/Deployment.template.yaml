@@ -26,31 +26,11 @@ spec:
         - name: {{ packageJson.name }}
           image: us-central1-docker.pkg.dev/{{ projectId }}/bizi-docker-images/{{ packageJson.name}}:{{tag}}
           ports:
-            
-            - name: ldaps
+            {{#each ports}}
+            - name: port-{{@index}}
               protocol: TCP
-              containerPort: 636
-            - name: ssh
-              containerPort: 22
-              protocol: TCP
-            - name: ircs
-              containerPort: 6697
-              protocol: TCP
-            - name: smtp-relay
-              containerPort: 25
-              protocol: TCP
-            - name: smtp-submission
-              containerPort: 465
-              protocol: TCP
-            - name: imap
-              protocol: TCP
-              containerPort: 993
-            - name: http
-              protocol: TCP
-              containerPort: 80
-            - name: https
-              protocol: TCP
-              containerPort: 443
+              containerPort: {{this}}
+            {{/each}}
           env:
           {{#forEach environmentVariables}}
             - name: {{ key }}

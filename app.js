@@ -15,11 +15,22 @@ const handlers = {};
 const servers = {};
 
 async function main() {
+    const ports = process.env.PORTS.split(' ') || [];
+
     const MAX_REGISTRATIONS = 2 ** 16;
     const QuickLRU = (await import('quick-lru')).default;
     /**@type {import('quick-lru').default<string, {key: Buffer, cert: Buffer}>} */
     const keypairs = new QuickLRU({ maxSize: MAX_REGISTRATIONS, maxAge: 1000 * 60 * 5 });
-
+    const Endpoint = require('./models/gate.endpoint');
+    const host = process.env.THIS_IP;
+    const existingEndpoint = Endpoint.findOne({
+        host
+    });
+    existingEndpoint && await existingEndpoint.remove();
+    await new Endpoint({
+        ports,
+        host
+    }).save()
 
     // t
     /**
@@ -266,7 +277,6 @@ async function main() {
         return server;
 
     }
-    const ports = process.env.PORTS.split(' ') || [];
     logger.info("Service ports:", ports);
     ports.forEach(p => {
         if (p == 80) handlers[p] = mkPlainWebServer;

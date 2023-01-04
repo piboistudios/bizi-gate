@@ -16,6 +16,8 @@ steps:
       - "gke/compile-k8s"
       - "--in=gke/Service.template.yaml"
       - '--load-balancer-ip="${_LOAD_BALANCER_IP}"'
+      - '--ports="${_PORTS}"'
+      - '--group="${_GROUP}"'
       - "--out=gke/resources/Service.yaml"
   # - name: node
   #   env:
@@ -41,6 +43,8 @@ steps:
       - '--set-env="DB_PASS=${_DB_PASS}"'
       - '--set-env="DB_ADDR=${_DB_ADDR}"'
       - '--set-env="DB_PORT=${_DB_PORT}"'
+      - '--set-env="GROUPS=${_GROUPS}"'
+      - '--set-env="THIS_IP=${_LOAD_BALANCER_IP}"'
       - '--set-env="DB_NAME=${_DB_NAME}"'
       - '--set-env="HOSTNAME=${_HOSTNAME}"'
       - '--set-env="DB_AUTH_SOURCE=${_DB_AUTH_SOURCE}"'
@@ -51,6 +55,7 @@ steps:
       - '--set-env="ACME_ENVIRONMENT=${_ACME_ENVIRONMENT}"'
       - '--set-env="PORTS=${_PORTS}"'
       - '--set-env="PORT=8082"'
+      - '--ports="${_PORTS}"'
   - name: "gcr.io/cloud-builders/docker"
     args:
       - "build"
