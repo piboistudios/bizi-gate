@@ -14,6 +14,6 @@ spec:
   {{#each ports}}
   - name: port-{{@index}}
     protocol: TCP
-    port: {{port}}
-    targetPort: {{port}}
+    port: {{this}}
+    targetPort: {{this}}
   {{/each}}
