@@ -26,12 +26,7 @@ spec:
         - name: {{ packageJson.name }}
           image: us-central1-docker.pkg.dev/{{ projectId }}/bizi-docker-images/{{ packageJson.name}}:{{tag}}
           ports:
-            - name: http
-              protocol: TCP
-              containerPort: 80
-            - name: https
-              protocol: TCP
-              containerPort: 443
+            
             - name: ldaps
               protocol: TCP
               containerPort: 636
@@ -50,6 +45,12 @@ spec:
             - name: imap
               protocol: TCP
               containerPort: 993
+            - name: http
+              protocol: TCP
+              containerPort: 80
+            - name: https
+              protocol: TCP
+              containerPort: 443
           env:
           {{#forEach environmentVariables}}
             - name: {{ key }}

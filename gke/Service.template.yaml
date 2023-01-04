@@ -1,45 +1,45 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{packageJson.name}}
+  name: { { packageJson.name } }
   annotations:
     cloud.google.com/l4-rbs: "enabled"
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
-  loadBalancerIP: {{loadBalancerIp}}
+  loadBalancerIP: { { loadBalancerIp } }
   selector:
-    app: {{packageJson.name}}
+    app: { { packageJson.name } }
   ports:
-  - name: http
-    protocol: TCP
-    port: 80
-    targetPort: 80
-  - name: https
-    protocol: TCP
-    port: 443
-    targetPort: 443
-  - name: ldaps
-    protocol: TCP
-    targetPort: 636
-    port: 636
-  - name: ssh
-    port: 22
-    protocol: TCP
-    targetPort: 22
-  - name: ircs
-    port: 6697
-    protocol: TCP
-    targetPort: 6697
-  - name: smtp-relay
-    port: 25
-    protocol: TCP
-    targetPort: 25
-  - name: smtp-submission
-    port: 465
-    protocol: TCP
-    targetPort: 465
-  - name: imap
-    protocol: TCP
-    targetPort: 993
-    port: 993
+    - name: ldaps
+      protocol: TCP
+      targetPort: 636
+      port: 636
+    - name: ssh
+      port: 22
+      protocol: TCP
+      targetPort: 22
+    - name: ircs
+      port: 6697
+      protocol: TCP
+      targetPort: 6697
+    - name: smtp-relay
+      port: 25
+      protocol: TCP
+      targetPort: 25
+    - name: smtp-submission
+      port: 465
+      protocol: TCP
+      targetPort: 465
+    - name: imap
+      protocol: TCP
+      targetPort: 993
+      port: 993
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 443
