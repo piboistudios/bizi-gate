@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{packageJson.name}}
+  name: {{packageJson.name}}-services
   annotations:
     cloud.google.com/l4-rbs: "enabled"
 spec:
@@ -23,7 +23,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{packageJson.name}}
+  name: {{packageJson.name}}-web
   annotations:
     cloud.google.com/l4-rbs: "enabled"
 spec:
