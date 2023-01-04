@@ -14,8 +14,8 @@ spec:
   
   - name: ldaps
     protocol: TCP
-    targetPort: 636
-    port: 636
+    targetPort: 600
+    port: 600
   - name: ssh
     port: 22
     protocol: TCP
