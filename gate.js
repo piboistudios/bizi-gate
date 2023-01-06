@@ -15,6 +15,7 @@ async function main() {
     const logError = logger.error;
     const Client = require('./models/client');
     const VirtualHost = require('./models/gate.virtual-host');
+    const DnsZone = require('./models/dns.zone');
     const DnsRecordset = require('./models/dns.recordset');
     const File = require('./models/file');
     const AcmeChallenge = require('./models/acme.challenge');
@@ -336,7 +337,51 @@ async function main() {
         vhost.cert = certFile.id;
         vhost.key = keyFile.id;
         await vhost.save();
-    })
+    });
+    rpc.addMethod("dns.zone.bootstrap", async ({
+        name,
+        domain: dnsName,
+        client
+    }) => {
+        const zone = new DnsZone({
+            name,
+            dnsName,
+            client
+        });
+        await zone.save();
+        const nsRecordset = new DnsRecordset({
+            zone: zone.id,
+            ttl: 300,
+            routingPolicy: 0,
+            resourceType: "NS",
+            records: [
+                ['ns-a1.bizi.ly', 'ns-a2.bizi.ly'].map(r => ({
+                    value: r,
+                    weight: 0
+                }))
+            ]
+        });
+        const soaRecordset = new DnsRecordset({
+            zone: zone.id,
+            ttl: 300,
+            routingPolicy: 0,
+            resourceType: "SOA",
+            records: [
+                ['ns-a1.bizi.ly hostmaster.bizi.ly 2 21600 3600 259200 300'].map(r => ({
+                    value: r,
+                    weight: 0
+                }))
+            ]
+        });
+        await Promise.all([nsRecordset, soaRecordset].map(d => d.save()));
+        return {
+            ids: {
+                zone: zone.id,
+                ns: nsRecordset.id,
+                soa: soaRecordset.id
+            }
+        }
+    });
     const express = require('express');
     const bodyParser = require('body-parser');
     const router = express();
