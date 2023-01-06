@@ -221,7 +221,7 @@ async function main() {
                 gateSrv.emit('connection', upstream);
                 return;
             }
-            const registration = await tryGetRegistration(upstream.hostname, port); //registrations.get(upstream.servername + ':' + port);
+            const registration = await tryGetRegistration(upstream.servername, port); //registrations.get(upstream.servername + ':' + port);
             if (!registration) {
 
                 upLog.fatal(fmtErr("No registration for: " + upstream.servername + ':' + port));
