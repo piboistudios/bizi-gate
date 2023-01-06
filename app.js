@@ -233,7 +233,7 @@ async function main() {
                 upLog.fatal(fmtErr("No virtual host for: " + upstream.servername));
                 return upstream.destroy();
             }
-            !vHost.populated('zone') && await vHost.populate('zone');
+            vHost.populated instanceof Function && !vHost.populated('zone') && await vHost.populate('zone');
             /**@type {import('./types').DnsZone} */
             const dnsZone = vHost.zone;
             if (!dnsZone) {
