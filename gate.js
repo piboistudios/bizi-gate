@@ -305,7 +305,7 @@ async function main() {
 
         } else {
             log.debug("Using existing recordset...", { ip });
-        }
+        } 
     });
     rpc.addMethod("vhost.registration.complete", async ({
         vhost: vhostId
