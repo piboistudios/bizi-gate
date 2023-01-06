@@ -343,6 +343,9 @@ async function main() {
         domain: dnsName,
         client
     }) => {
+        const log = logger.sub("dns.zone.bootstrap");
+        log.info("Start");
+        log.info("Checking for existing zone...");
         const existingZone = await DnsZone.findOne({
             $or: [
                 {
@@ -354,13 +357,17 @@ async function main() {
                 }
             ]
         });
+        log.info("Zone exists?", existingZone);
         if (existingZone) throw "Zone already exists.";
+        log.info("Creating dns zone:", { name, dnsName, client });
         const zone = new DnsZone({
             name,
             dnsName,
             client
         });
         await zone.save();
+        log.info("Zone created");
+        log.debug(zone);
         const nsRecordset = new DnsRecordset({
             zone: zone.id,
             ttl: 300,
@@ -385,14 +392,23 @@ async function main() {
                 }))
             ]
         });
+        log.info("Creating NS and SOA recordsets");
         await Promise.all([nsRecordset, soaRecordset].map(d => d.save()));
-        return {
+        log.info("Recordsets created");
+        log.debug(
+            nsRecordset,
+            soaRecordset
+        );
+        const ids = {
             ids: {
                 zone: zone.id,
                 ns: nsRecordset.id,
                 soa: soaRecordset.id
             }
-        }
+        };
+        log.info("Returning ids");
+        log.debug(ids);
+        return ids;
     });
     const express = require('express');
     const bodyParser = require('body-parser');
