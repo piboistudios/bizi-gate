@@ -343,6 +343,18 @@ async function main() {
         domain: dnsName,
         client
     }) => {
+        const existingZone = await DnsZone.findOne({
+            $or: [
+                {
+                    name,
+                    client
+                },
+                {
+                    dnsName
+                }
+            ]
+        });
+        if (existingZone) throw "Zone already exists.";
         const zone = new DnsZone({
             name,
             dnsName,
