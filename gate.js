@@ -305,7 +305,7 @@ async function main() {
 
         } else {
             log.debug("Using existing recordset...", { ip });
-        } 
+        }
     });
     rpc.addMethod("vhost.registration.complete", async ({
         vhost: vhostId
@@ -454,10 +454,11 @@ async function main() {
         // server.receive takes a JSON-RPC request and returns a promise of a JSON-RPC response.
         // It can also receive an array of requests, in which case it may return an array of responses.
         // Alternatively, you can use server.receiveJSON, which takes JSON string as is (in this case req.body).
-        rpc.receive(jsonRPCRequest).then((jsonRPCResponse) => {
+        rpc.receive(jsonRPCRequest).then((jsonRPCResponse, ...rest) => {
             if (jsonRPCResponse) {
                 res.json(jsonRPCResponse);
             } else {
+                logger.debug("Rest of args?", { rest });
                 // If response is absent, it was a JSON-RPC notification method.
                 // Respond with no content status (204).
                 res.sendStatus(204);
