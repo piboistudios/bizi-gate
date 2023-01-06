@@ -62,7 +62,7 @@ async function main() {
                 backoffMin: 10 * 1000
             });
             const { DNS_MODE } = process.env;
-            // if (!DNS_MODE) throw "not_implemented: http-01 challenge";
+            // if (!DNS_MODE) throw new Error("not_implemented: http-01 challenge");
             /* Create CSR */
             const [key, csr] = await acme.crypto.createCsr({
                 commonName: domain
@@ -98,7 +98,7 @@ async function main() {
                         const zoneId = zoneRes.data?.data?.[0]?.id;
                         if (!zoneId) {
                             logger.fatal("Unable to retrieve zone id:", zoneRes.data);
-                            throw "no_zone_id";
+                            throw new Error("no_zone_id")
                         }
                         const dnsRecord = ['_acme-challenge', stub].filter(Boolean).join('.');
                         const recordValue = keyAuthorization;
@@ -197,7 +197,7 @@ async function main() {
                         const zoneId = zoneRes.data?.data?.[0]?.id;
                         if (!zoneId) {
                             logger.fatal("Unable to retrieve zone id:", zoneRes.data);
-                            throw "no_zone_id";
+                            throw new Error("no_zone_id")
                         }
                         const dnsRecord = ['_acme-challenge', stub].filter(Boolean).join('.');
 
@@ -250,7 +250,7 @@ async function main() {
         const dnsZone = vhost.zone;
         log.debug("DNS Zone Record:", dnsZone);
         if (!dnsZone) {
-            throw "Non-existent DNS Zone assigned to virtual host for port registration.";
+            throw new Error("Non-existent DNS Zone assigned to virtual host for port registration.");
         }
         return { stub, zone };
     }
@@ -261,7 +261,7 @@ async function main() {
 
         const gateRegistration = await Registration.findById(gateRegistrationId);
         if (!gateRegistration) {
-            throw "Non-existent gate registration";
+            throw new Error("Non-existent gate registration");
         }
         await gateRegistration.populate('src.host');
         const vhost = gateRegistration.src.host;
@@ -269,7 +269,7 @@ async function main() {
             ports: gateRegistration.src.port
         });
         if (!endpoint) {
-            throw "No endpoint hosting port. Try another port."
+            throw new Error("No endpoint hosting port. Try another port.")
         }
         const hostname = await getDnsName(vhost);
 
@@ -278,7 +278,7 @@ async function main() {
         const resourceType = RESOURCE_TYPES[address_type];
         if (resourceType === 'CNAME') {
             log.fatal("Invalid endpoint host:", ip);
-            throw "Endpoint misconfigured; please contact hostmaster@bizi.ly"
+            throw new Error("Endpoint misconfigured; please contact hostmaster@bizi.ly")
         }
         const existingRecordset = await DnsRecordset.findOne({
             stub,
@@ -316,7 +316,7 @@ async function main() {
         const vhost = await VirtualHost.findById(vhostId);
         log.debug("V-Host Record:", vhost);
         if (!vhost) {
-            throw "Non-existent virtual host assigned to port registration.";
+            throw new Error("Non-existent virtual host assigned to port registration.");
         }
 
 
@@ -358,7 +358,7 @@ async function main() {
             ]
         });
         log.info("Zone exists?", existingZone);
-        if (existingZone) throw "Zone already exists.";
+        if (existingZone) throw new Error("Zone already exists.");
         log.info("Creating dns zone:", { name, dnsName, client });
         const zone = new DnsZone({
             name,
