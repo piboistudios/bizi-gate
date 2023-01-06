@@ -139,6 +139,8 @@ async function main() {
             protocol: "TCP"
         });
         if (!registration) throw new Error("No port registration");
+        !registration.populated('src.host') && await registration.populate('src.host');
+
         registrations.set(regKey, registration);
         return registration;
     }
@@ -155,7 +157,6 @@ async function main() {
         try {
 
             const registration = await tryGetRegistration(servername, port);//registrations.get(servername);
-            !registration.populated('src.host') && await registration.populate('src.host');
             /**
              * @type {import('./types').VHost}
              */
