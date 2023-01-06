@@ -243,6 +243,8 @@ async function main() {
     const { JSONRPCServer, createJSONRPCErrorResponse } = require('json-rpc-2.0')
     const rpc = new JSONRPCServer();
     async function getDnsName(vhost) {
+        const log = logger.sub("getDnsName");
+
         const stub = vhost.stub;
         log.debug("Populating zone data...");
         await vhost.populate('zone');
@@ -252,7 +254,7 @@ async function main() {
         if (!dnsZone) {
             throw new Error("Non-existent DNS Zone assigned to virtual host for port registration.");
         }
-        return { stub, zone };
+        return [stub, dnsZone.dnsName].filter(Boolean).join('.');
     }
     rpc.addMethod('gate.registration.complete', async ({
         gateRegistration: gateRegistrationId
@@ -272,7 +274,8 @@ async function main() {
             throw new Error("No endpoint hosting port. Try another port.")
         }
         const hostname = await getDnsName(vhost);
-
+        const dnsZone = vhost.zone;
+        const stub = vhost.stub;
         const ip = endpoint.host;
         var address_type = net.isIP(ip);
         const resourceType = RESOURCE_TYPES[address_type];
@@ -301,7 +304,7 @@ async function main() {
             });
             log.debug("Saving new DNS recordset...", { ip, ...recordset.toJSON() });
             await recordset.save();
-            log.info("DNS Recordset saved for", hostname, "to point to", `${ip}:${process.env.THIS_PORT}`);
+            log.info("DNS Recordset saved for", hostname, "to point to", `${ip}`);
 
         } else {
             log.debug("Using existing recordset...", { ip });
