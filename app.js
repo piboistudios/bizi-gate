@@ -1,5 +1,6 @@
 const SMTPConnection = require("nodemailer/lib/smtp-connection");
 const SMTPServer = require("smtp-server").SMTPServer;
+const { Transform } = require('stream');
 const { mkLogger } = require("./logger");
 const { all: allUnbound } = Promise;
 const all = allUnbound.bind(Promise);
@@ -181,7 +182,7 @@ async function main() {
         return srv;
 
     }
-    const pipeTls = async (upstream, port) => {
+    const pipeTls = async (upstream, port, transformer) => {
         const downLog = logger.sub('secureConnect:' + upstream.servername + ':' + port + ':' + 'downstream')
         const upLog = logger.sub('secureConnect:' + upstream.servername + ':' + port + ':' + 'upstream')
         upstream.on('error', e => {
@@ -230,8 +231,10 @@ async function main() {
             servername,
             rejectUnauthorized: false
         });
+        const ds = transformer ? downstream.pipe(transformer) : downstream;
         upstream
-            .pipe(downstream)
+            .pipe(downstream);
+        ds
             .pipe(upstream);
 
 
@@ -297,12 +300,27 @@ async function main() {
             banner: process.env.SMTP_BANNER,
             name: process.env.SMTP_NAME,
             ...SNICallback(port),
+            /**
+             * 
+             * @param {import('net').TLSSocket} socket 
+             * @param {*} session 
+             * @param {*} cb 
+             * @returns 
+             */
             onSecure(socket, session, cb) {
                 if (!socket.servername) {
                     log.fatal("SNI failure: no servername provided");
                     return cb(new Error("SNI failure"));
                 }
-                pipeTls(socket, port);
+                const stripGreeting = new Transform({
+                    transform(chunk, encoding, cb) {
+                        const s = '' + chunk;
+                        // log.debug("TRANSFORM:", s);
+                        if (s.indexOf('220') !== 0) cb(null, s);
+                        else cb(null, null);
+                    }
+                });
+                pipeTls(socket, port, stripGreeting);
             },
             ...Object.fromEntries(['onAuth', 'onMailFrom', 'onRcptTo', 'onData'].map(key => [key, (foo, bar, cb) => {
                 cb(new Error("SNI Failure"));
