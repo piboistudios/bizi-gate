@@ -245,37 +245,38 @@ async function main() {
         // })
 
     };
+    async function SNICallback(servername, cb) {
+        logger.info("Initiate SNI...", { servername, thisHosts });
+        let key, cert;
+        if (thisHosts.indexOf(servername) !== -1) {
+            key = pems.private;
+            cert = pems.cert;
+
+        } else {
+
+            if (!keypairs.has(servername)) {
+
+                let err = await tryEnsureKeypair(servername, port);
+                logger.fatal("SNI Failure:", err);
+                if (err) return cb(err);
+            }
+            let ctx;
+            const keypair = keypairs.get(servername);
+            key = keypair.key;
+            cert = keypair.cert;
+        }
+        /** @todo create ctx */
+        ctx = tls.createSecureContext({
+            key,
+            cert,
+        });
+        // ctx.someRandomData = 'foo';
+        cb(null, ctx);
+    }
     function mkTlsServer(port, deaf) {
         !deaf && logger.info("Starting TLS server on port", port);
         const server = tls.createServer({
-            async SNICallback(servername, cb) {
-                logger.info("Initiate SNI...", { servername, thisHosts });
-                let key, cert;
-                if (thisHosts.indexOf(servername) !== -1) {
-                    key = pems.private;
-                    cert = pems.cert;
-
-                } else {
-
-                    if (!keypairs.has(servername)) {
-
-                        let err = await tryEnsureKeypair(servername, port);
-                        logger.fatal("SNI Failure:", err);
-                        if (err) return cb(err);
-                    }
-                    let ctx;
-                    const keypair = keypairs.get(servername);
-                    key = keypair.key;
-                    cert = keypair.cert;
-                }
-                /** @todo create ctx */
-                ctx = tls.createSecureContext({
-                    key,
-                    cert,
-                });
-                // ctx.someRandomData = 'foo';
-                cb(null, ctx);
-            }
+           SNICallback
         });
         server.on('secureConnection', socket => pipeTls(socket, port));
         !deaf && server.listen(port);
@@ -289,6 +290,7 @@ async function main() {
         const srv = new SMTPServer({
             banner: process.env.SMTP_BANNER,
             name: process.env.SMTP_NAME,
+            SNICallback,
             onSecure(socket, session, cb) {
                 if (!socket.servername) {
                     log.fatal("SNI failure: no servername provided");
