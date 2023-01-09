@@ -1,3 +1,5 @@
+const SMTPConnection = require("nodemailer/lib/smtp-connection");
+const SMTPServer = require("smtp-server").SMTPServer;
 const { mkLogger } = require("./logger");
 const { all: allUnbound } = Promise;
 const all = allUnbound.bind(Promise);
@@ -61,44 +63,7 @@ async function main() {
     const gateRouter = await require('./gate');
     const thisHosts = [...process.env.THIS_HOST.split(','), 'localhost']
 
-    function mkGateSrv(port, deaf = true) {
-        const srv = http.createServer((req, res) => {
-            if (thisHosts.includes(req.headers.host)) {
-                return gateRouter(req, res)
-            }
-            res.writeHead(302, {
-                location: `https://${req.headers.host}${req.url}`,
-            });
-            res.end();
-        });
 
-        // !deaf && srv.listen(port);
-        return srv;
-    }
-
-    const gateSrv = mkGateSrv();
-
-    function mkPlainWebServer(port, deaf) {
-        logger.info("Starting plain web server on port", port);
-        const tlsSrv = mkTlsServer(port, true);
-        const srv = net.createServer();
-        srv.on('connection', function (socket) {
-            socket.once('data', function (data) {
-                if (data[0] == 0x16 || data[0] == 0x80 || data[0] == 0x00) {
-                    logger.debug('>> TLS detected');
-                    tlsSrv.emit('connection', socket);
-                } else {
-                    logger.debug('>> no TLS detected');
-                    gateSrv.emit('connection', socket);
-                }
-                socket.push(data);
-            });
-        });
-        !deaf && srv.listen(port);
-
-        return srv;
-
-    }
     function parseName(domain) {
         const nameParts = domain.split('.');
         const tld = nameParts.pop();
@@ -178,6 +143,108 @@ async function main() {
         if (err) return reject(err);
         resolve(pems);
     }));
+    function mkGateSrv(port, deaf = true) {
+        const srv = http.createServer((req, res) => {
+            if (thisHosts.includes(req.headers.host)) {
+                return gateRouter(req, res)
+            }
+            res.writeHead(302, {
+                location: `https://${req.headers.host}${req.url}`,
+            });
+            res.end();
+        });
+
+        // !deaf && srv.listen(port);
+        return srv;
+    }
+
+    const gateSrv = mkGateSrv();
+
+    function mkPlainWebServer(port, deaf) {
+        logger.info("Starting plain web server on port", port);
+        const tlsSrv = mkTlsServer(port, true);
+        const srv = net.createServer();
+        srv.on('connection', function (socket) {
+            socket.once('data', function (data) {
+                if (data[0] == 0x16 || data[0] == 0x80 || data[0] == 0x00) {
+                    logger.debug('>> TLS detected');
+                    tlsSrv.emit('connection', socket);
+                } else {
+                    logger.debug('>> no TLS detected');
+                    gateSrv.emit('connection', socket);
+                }
+                socket.push(data);
+            });
+        });
+        !deaf && srv.listen(port);
+
+        return srv;
+
+    }
+    const pipeTls = async upstream => {
+        const downLog = logger.sub('secureConnect:' + upstream.servername + ':' + port + ':' + 'downstream')
+        const upLog = logger.sub('secureConnect:' + upstream.servername + ':' + port + ':' + 'upstream')
+        upstream.on('error', e => {
+            upLog
+                .error(e);
+        });
+        logger.debug("socket servername (SNI):", upstream.servername, upstream.address())
+        if (!upstream.servername || thisHosts.indexOf(upstream.servername) !== -1) {
+            gateSrv.emit('connection', upstream);
+            return;
+        }
+        const registration = await tryGetRegistration(upstream.servername, port); //registrations.get(upstream.servername + ':' + port);
+        if (!registration) {
+
+            upLog.fatal(fmtErr("No registration for: " + upstream.servername + ':' + port));
+            return upstream.destroy();
+        }
+        /**@type {import('./types').VHost} */
+        const vHost = registration.src.host;
+        if (!vHost) {
+            upLog.fatal(fmtErr("No virtual host for: " + upstream.servername));
+            return upstream.destroy();
+        }
+        vHost.populated instanceof Function && !vHost.populated('zone') && await vHost.populate('zone');
+        /**@type {import('./types').DnsZone} */
+        const dnsZone = vHost.zone;
+        if (!dnsZone) {
+            upLog.fatal(fmtErr("No DNS Zone found."));
+            return upstream.destroy();
+        }
+        // upstream.au
+        const zone = dnsZone.dnsName;
+        const stub = vHost.stub;
+        const hostname = [stub, zone].filter(Boolean).join('.');
+        if (!hostname) {
+            return upstream.destroy(fmtErr("Invalid hostname:", { zone, stub, hostname, registration }));
+        }
+        logger.debug("Attempting to establish downstream connection to", registration.dest.host, "on port", registration.dest.port);
+        const proto = registration.dest.tlsTermination ? tls : net;
+
+
+        let servername;
+        if (proto === tls && !net.isIP(registration.dest.host)) servername = registration.dest.host;
+
+        const downstream = proto.connect(registration.dest.port, registration.dest.host, {
+            servername,
+            rejectUnauthorized: false
+        });
+        upstream
+            .pipe(downstream)
+            .pipe(upstream);
+
+
+        downstream.on('error', e => {
+            downLog
+                .fatal(e);
+            upstream.emit('error', e);
+        })
+        // sock.on('end', () => {
+        //     pipeSock
+        // })
+
+    };
     function mkTlsServer(port, deaf) {
         !deaf && logger.info("Starting TLS server on port", port);
         const server = tls.createServer({
@@ -210,77 +277,40 @@ async function main() {
                 cb(null, ctx);
             }
         });
-        server.on('secureConnection', async upstream => {
-            const downLog = logger.sub('secureConnect:' + upstream.servername + ':' + port + ':' + 'downstream')
-            const upLog = logger.sub('secureConnect:' + upstream.servername + ':' + port + ':' + 'upstream')
-            upstream.on('error', e => {
-                upLog
-                    .error(e);
-            });
-            logger.debug("socket servername (SNI):", upstream.servername, upstream.address())
-            if (!upstream.servername || thisHosts.indexOf(upstream.servername) !== -1) {
-                gateSrv.emit('connection', upstream);
-                return;
-            }
-            const registration = await tryGetRegistration(upstream.servername, port); //registrations.get(upstream.servername + ':' + port);
-            if (!registration) {
-
-                upLog.fatal(fmtErr("No registration for: " + upstream.servername + ':' + port));
-                return upstream.destroy();
-            }
-            /**@type {import('./types').VHost} */
-            const vHost = registration.src.host;
-            if (!vHost) {
-                upLog.fatal(fmtErr("No virtual host for: " + upstream.servername));
-                return upstream.destroy();
-            }
-            vHost.populated instanceof Function && !vHost.populated('zone') && await vHost.populate('zone');
-            /**@type {import('./types').DnsZone} */
-            const dnsZone = vHost.zone;
-            if (!dnsZone) {
-                upLog.fatal(fmtErr("No DNS Zone found."));
-                return upstream.destroy();
-            }
-            // upstream.au
-            const zone = dnsZone.dnsName;
-            const stub = vHost.stub;
-            const hostname = [stub, zone].filter(Boolean).join('.');
-            if (!hostname) {
-                return upstream.destroy(fmtErr("Invalid hostname:", { zone, stub, hostname, registration }));
-            }
-            logger.debug("Attempting to establish downstream connection to", registration.dest.host, "on port", registration.dest.port);
-            const proto = registration.dest.tlsTermination ? tls : net;
-
-
-            let servername;
-            if (proto === tls && !net.isIP(registration.dest.host)) servername = registration.dest.host;
-
-            const downstream = proto.connect(registration.dest.port, registration.dest.host, {
-                servername,
-                rejectUnauthorized: false
-            });
-            upstream
-                .pipe(downstream)
-                .pipe(upstream);
-
-
-            downstream.on('error', e => {
-                downLog
-                    .fatal(e);
-                upstream.emit('error', e);
-            })
-            // sock.on('end', () => {
-            //     pipeSock
-            // })
-
-        });
+        server.on('secureConnection', pipeTls);
         !deaf && server.listen(port);
         return server;
 
     }
+
+    function mkMailRouter(port) {
+        const log = logger.sub("smtp-server");
+        log.info("Starting mail router on port", port);
+        const srv = new SMTPServer({
+            banner: process.env.SMTP_BANNER,
+            name: process.env.SMTP_NAME,
+            onSecure(socket, session, cb) {
+                if (!socket.servername) {
+                    log.fatal("SNI failure: no servername provided");
+                    return cb(new Error("SNI failure"));
+                }
+                pipeTls(socket);
+            },
+            ...Object.fromEntries(['onAuth', 'onMailFrom', 'onRcptTo', 'onData'].map(key => [key, (foo, bar, cb) => {
+                cb(new Error("SNI Failure"));
+            }]))
+        });
+        srv.listen(port);
+        return srv;
+    }
+    const SERVER_FACTORIES = {
+        80: mkPlainWebServer,
+        25: mkMailRouter
+    }
     logger.info("Service ports:", ports);
     ports.forEach(p => {
-        if (p == 80) handlers[p] = mkPlainWebServer;
+        const serverFactory = SERVER_FACTORIES[p];
+        if (serverFactory) handlers[p] = serverFactory;
         else handlers[p] = mkTlsServer;
     });
     const pending = [];
@@ -291,10 +321,9 @@ async function main() {
                 .on('listening',
                     () => resolve()
                 )
-                .on('error', e => reject({
-                    original: e,
-                    port: p
-                }))
+                .on('error', (e) => {
+                    logger.error("Connection error:", e);
+                })
         ))
 
     });
