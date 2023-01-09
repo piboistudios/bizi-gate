@@ -181,7 +181,7 @@ async function main() {
         return srv;
 
     }
-    const pipeTls = async upstream => {
+    const pipeTls = async (upstream, port) => {
         const downLog = logger.sub('secureConnect:' + upstream.servername + ':' + port + ':' + 'downstream')
         const upLog = logger.sub('secureConnect:' + upstream.servername + ':' + port + ':' + 'upstream')
         upstream.on('error', e => {
@@ -277,7 +277,7 @@ async function main() {
                 cb(null, ctx);
             }
         });
-        server.on('secureConnection', pipeTls);
+        server.on('secureConnection', socket => pipeTls(socket, port));
         !deaf && server.listen(port);
         return server;
 
@@ -294,7 +294,7 @@ async function main() {
                     log.fatal("SNI failure: no servername provided");
                     return cb(new Error("SNI failure"));
                 }
-                pipeTls(socket);
+                pipeTls(socket, port);
             },
             ...Object.fromEntries(['onAuth', 'onMailFrom', 'onRcptTo', 'onData'].map(key => [key, (foo, bar, cb) => {
                 cb(new Error("SNI Failure"));
