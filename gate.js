@@ -227,13 +227,13 @@ async function main() {
                 }
             });
 
-            latest = {};
-            latest.csr = '' + csr;
-            latest.key = '' + key;
-            latest.cert = '' + cert;
+            let result = {};
+            result.csr = '' + csr;
+            result.key = '' + key;
+            result.cert = '' + cert;
             /* Done */
 
-            return latest;
+            return result;
         } catch (e) {
             log.error("Unable to complete acme challenge:", e);
             throw e;
@@ -279,10 +279,10 @@ async function main() {
         const ip = endpoint.host;
         var address_type = net.isIP(ip);
         const resourceType = RESOURCE_TYPES[address_type];
-        if (resourceType === 'CNAME') {
-            log.fatal("Invalid endpoint host:", ip);
-            throw new Error("Endpoint misconfigured; please contact hostmaster@bizi.ly")
-        }
+        // if (resourceType === 'CNAME') {
+        //     log.fatal("Invalid endpoint host:", ip);
+        //     throw new Error("Endpoint misconfigured; please contact hostmaster@bizi.ly")
+        // }
         const existingRecordset = await DnsRecordset.findOne({
             stub,
             zone: dnsZone.id,
@@ -416,8 +416,35 @@ async function main() {
     const express = require('express');
     const bodyParser = require('body-parser');
     const router = express();
+    const nameparser = require('tldts');
+    const fs = require('fs');
+    const mtaStsTemplate = fs.readFileSync('mta-sts-template.txt');
+    const mkMtaSts = require('handlebars').compile(mtaStsTemplate);
     router.use(bodyParser.json());
     router.get("/", (req, res) => res.status(200).json("OK"))
+    router.get("/.well-known/mta-sts.txt", async (req, res, next) => {
+        const log = logger.sub('.well-known-mta-sts');
+        const parsed = nameparser.parse(req.hostname);
+        const zone = await DnsZone.findOne({
+            dnsName: parsed.domain
+        });
+        if (!zone) {
+            log.error("DNS Zone does not exist:", parsed);
+            return res.status(404);
+        }
+        const mxRecords = await DnsRecordset.findOne({
+            stub: parsed.subdomain,
+            zone: zone.id
+        });
+        if (!mxRecords) {
+            log.error("MX Records not found:", parsed, zone);
+            return res.status(404).json("NOT FOUND");
+        }
+
+        res.status(200).send(mkMtaSts({
+            mxs: mxRecords.records.map(r => r.value)
+        }));
+    });
     router.get("/.well-known/acme-challenge/:token", async (req, res) => {
         const { token } = req.params;
         const acmeChallenge = await AcmeChallenge.findOne({

@@ -16,7 +16,8 @@
     "qs": "^6.11.0",
     "quick-lru": "^6.1.1",
     "selfsigned": "^2.1.1",
-    "smtp-server": "github:piboistudios/smtp-server#secure-socket-interception"
+    "smtp-server": "github:piboistudios/smtp-server#secure-socket-interception",
+    "tldts": "^5.7.104"
   },
   "name": "bizi-gate",
   "version": "0.0.0",

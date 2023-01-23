@@ -1,0 +1,6 @@
+version: STSv1
+mode: enforce
+{{#each mxs}}
+mx: {{this}}
+{{/each}}
+max_age: 604800
