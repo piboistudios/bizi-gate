@@ -425,6 +425,12 @@ async function main() {
     router.get("/.well-known/mta-sts.txt", async (req, res, next) => {
         const log = logger.sub('.well-known-mta-sts');
         const parsed = nameparser.parse(req.hostname);
+        const subParts = parsed.subdomain.split('.');
+        if (!subParts.indexOf('mta-sts')) {
+            log.error("Invalid hostname:", parsed);
+            return res.status(404);
+        }
+        const subdomain = subParts.filter(p => p !== 'mta-sts').join('.');
         const zone = await DnsZone.findOne({
             dnsName: parsed.domain
         });
@@ -433,7 +439,7 @@ async function main() {
             return res.status(404);
         }
         const mxRecords = await DnsRecordset.findOne({
-            stub: parsed.subdomain,
+            stub: subdomain,
             zone: zone.id
         });
         if (!mxRecords) {
