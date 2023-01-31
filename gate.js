@@ -419,7 +419,7 @@ async function main() {
     const nameparser = require('tldts');
     const fs = require('fs');
     const mtaStsTemplate = fs.readFileSync('mta-sts-template.txt');
-    const mkMtaSts = require('handlebars').compile(mtaStsTemplate);
+    const mkMtaSts = require('handlebars').compile('' + mtaStsTemplate);
     router.use(bodyParser.json());
     router.get("/", (req, res) => res.status(200).json("OK"))
     router.get("/.well-known/mta-sts.txt", async (req, res, next) => {
