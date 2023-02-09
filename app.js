@@ -63,16 +63,7 @@ async function main() {
     const registrations = new QuickLRU({ maxSize: MAX_REGISTRATIONS, maxAge: 1000 * 60 * 5 });
     const gateRouter = await require('./gate');
     const thisHosts = [...process.env.THIS_HOST.split(','), 'localhost']
-
-
-    function parseName(domain) {
-        const nameParts = domain.split('.');
-        const tld = nameParts.pop();
-        const host = nameParts.pop();
-        const stub = nameParts.length ? nameParts.join('.') : undefined;
-        const zone = [host, tld].filter(Boolean).join('.');
-        return { stub, zone };
-    }
+    const parseDomain = require('parse-domains');
 
     function fmtErr() {
         return [...arguments].map(a => {
@@ -88,19 +79,30 @@ async function main() {
         const regKey = `${servername}:${port}`;
         if (registrations.has(regKey)) return registrations.get(regKey);
         log.info(servername);
-        const { stub, zone } = parseName(servername);
+        const parsed = await parseDomain(servername);
+        const stub = parsed.subdomain;
+        const zone = parsed.domain;
         log.debug({ stub, zone });
-        const dnsZone = await DnsZone.findOne({
-            dnsName: zone
+        const dnsZoneStubless = await DnsZone.findOne({
+            dnsName: new RegExp(regexStrict(zone), 'i')
         });
-        if (!dnsZone) throw new Error("No DNS Zone");
-        const vHost = await VirtualHost.findOne({
-            zone: dnsZone.id,
-            stub
+
+        const dnsZoneFull = await DnsZone.findOne({
+            dnsName: new RegExp(regexStrict(parsed.hostname), 'i')
         });
-        if (!vHost) throw new Error("No Virtual host");
+        if (!dnsZoneStubless && !dnsZoneFull) throw new Error("No DNS Zone");
+        const vhosts = (await Promise.all([
+            VirtualHost.findOne({
+                zone: dnsZoneStubless.id,
+                stub
+            }),
+            VirtualHost.findOne({
+                zone: dnsZoneFull.id
+            })])).filter(Boolean);
+
+        if (!vhosts.filter.length) throw new Error("No Virtual host");
         const registration = await Registration.findOne({
-            "src.host": vHost.id,
+            "src.host": vhosts,
             "src.port": port,
             protocol: "TCP"
         });
