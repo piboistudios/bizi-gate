@@ -418,13 +418,14 @@ async function main() {
     const router = express();
     const nameparser = require('tldts');
     const fs = require('fs');
+    const parseDomain = require('parse-domains');
     const mtaStsTemplate = fs.readFileSync('mta-sts-template.txt');
     const mkMtaSts = require('handlebars').compile('' + mtaStsTemplate);
     router.use(bodyParser.json());
     router.get("/", (req, res) => res.status(200).json("OK"))
     router.get("/.well-known/mta-sts.txt", async (req, res, next) => {
         const log = logger.sub('.well-known-mta-sts');
-        const parsed = nameparser.parse(req.hostname);
+        const parsed = await parseDomain(req.hostname);
         const subParts = parsed.subdomain.split('.');
         if (subParts.indexOf('mta-sts') === -1) {
             log.error("Invalid hostname:", parsed);
@@ -434,21 +435,31 @@ async function main() {
         const zone = await DnsZone.findOne({
             dnsName: parsed.domain
         });
+        const dnsZones = await DnsZone.find({
+            dnsName: new RegExp(`((${parsed.subdomain}\.)|^)` + parsed.domain + '$', 'i')
+        });
         if (!zone) {
             log.error("DNS Zone does not exist:", parsed);
             return res.status(404).json("NOT FOUND");
         }
-        const mxRecords = await DnsRecordset.findOne({
-            stub: subdomain,
-            zone: zone.id
+        const mxRecords = await DnsRecordset.find({
+            $or: dnsZones.map(z => {
+                const searchStub = z.dnsName.indexOf(stub) === 0 ? undefined : stub;
+                return {
+                    stub: searchStub,
+                    zone: z.id,
+                    resourceType: 'MX'
+                }
+            })
         });
+
         if (!mxRecords) {
             log.error("MX Records not found:", parsed, zone);
             return res.status(404).json("NOT FOUND");
         }
 
         res.status(200).send(mkMtaSts({
-            mxs: mxRecords.records.map(r => r.value)
+            mxs: mxRecords.flatMap(r => r.records.map(r => r.value))
         }));
     });
     router.get("/.well-known/acme-challenge/:token", async (req, res) => {
