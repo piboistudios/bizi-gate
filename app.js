@@ -73,6 +73,7 @@ async function main() {
     }
     const Registration = require('./models/gate.registration');
     const VirtualHost = require('./models/gate.virtual-host');
+    const regexStrict = v => `^${v}$`;
 
     async function tryGetRegistration(servername, port) {
         const log = logger.sub('tryGetRegistration');
@@ -83,22 +84,19 @@ async function main() {
         const stub = parsed.subdomain;
         const zone = parsed.domain;
         log.debug({ stub, zone });
-        const dnsZoneStubless = await DnsZone.findOne({
-            dnsName: new RegExp(regexStrict(zone), 'i')
+        const dnsZones = await DnsZone.find({
+            dnsName: new RegExp(`((${stub}\.)|^)` + zone + '$', 'i')
         });
-
-        const dnsZoneFull = await DnsZone.findOne({
-            dnsName: new RegExp(regexStrict(parsed.hostname), 'i')
-        });
-        if (!dnsZoneStubless && !dnsZoneFull) throw new Error("No DNS Zone");
-        const vhosts = (await Promise.all([
-            VirtualHost.findOne({
-                zone: dnsZoneStubless.id,
-                stub
-            }),
-            VirtualHost.findOne({
-                zone: dnsZoneFull.id
-            })])).filter(Boolean);
+        if (!dnsZones.length) throw new Error("No DNS Zone");
+        const vhosts = await VirtualHost.find({
+            $or: dnsZones.map(z => {
+                const searchStub = z.dnsName.indexOf(stub) === 0 ? undefined : stub;
+                return {
+                    stub: searchStub,
+                    zone: z.id,
+                }
+            })
+        })
 
         if (!vhosts.filter.length) throw new Error("No Virtual host");
         const registration = await Registration.findOne({
