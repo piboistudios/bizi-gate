@@ -451,7 +451,7 @@ async function main() {
             })
         });
 
-        if (!mxRecords) {
+        if (!mxRecords.length) {
             log.error("MX Records not found:", parsed, zone);
             return res.status(404).json("NOT FOUND");
         }
