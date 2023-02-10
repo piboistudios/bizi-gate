@@ -455,7 +455,7 @@ async function main() {
             log.error("MX Records not found:", parsed, zone);
             return res.status(404).json("NOT FOUND");
         }
-
+        res.type('txt');
         res.status(200).send(mkMtaSts({
             mxs: mxRecords.flatMap(r => r.records.map(r => r.value))
         }));
