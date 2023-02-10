@@ -426,7 +426,7 @@ async function main() {
         const log = logger.sub('.well-known-mta-sts');
         const parsed = nameparser.parse(req.hostname);
         const subParts = parsed.subdomain.split('.');
-        if (!subParts.indexOf('mta-sts')) {
+        if (subParts.indexOf('mta-sts') === -1) {
             log.error("Invalid hostname:", parsed);
             return res.status(404);
         }
