@@ -444,9 +444,7 @@ async function main() {
         }
         const mxRecords = await DnsRecordset.find({
             $or: dnsZones.map(z => {
-                const searchStub = z.dnsName.indexOf(stub) === 0 ? undefined : stub;
                 return {
-                    stub: searchStub,
                     zone: z.id,
                     resourceType: 'MX'
                 }
