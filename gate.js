@@ -428,7 +428,7 @@ async function main() {
         const subParts = parsed.subdomain.split('.');
         if (subParts.indexOf('mta-sts') === -1) {
             log.error("Invalid hostname:", parsed);
-            return res.status(404);
+            return res.status(404).json("NOT FOUND");
         }
         const subdomain = subParts.filter(p => p !== 'mta-sts').join('.');
         const zone = await DnsZone.findOne({
@@ -436,7 +436,7 @@ async function main() {
         });
         if (!zone) {
             log.error("DNS Zone does not exist:", parsed);
-            return res.status(404);
+            return res.status(404).json("NOT FOUND");
         }
         const mxRecords = await DnsRecordset.findOne({
             stub: subdomain,
