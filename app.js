@@ -146,7 +146,7 @@ async function main() {
     }));
     function mkGateSrv(port, deaf = true) {
         const srv = http.createServer((req, res) => {
-            if (thisHosts.includes(req.headers.host)) {
+            if (req.headers.host.indexOf('mta-sts') === 0 || thisHosts.includes(req.headers.host)) {
                 return gateRouter(req, res)
             }
             res.writeHead(302, {
@@ -182,7 +182,12 @@ async function main() {
         return srv;
 
     }
+    const NAMES = {
+        'localhost': 'irc.gabedev.chat'
+    }
     const pipeTls = async (upstream, port, transformer) => {
+        upstream.servername = NAMES[upstream.servername] || upstream.servername;
+
         const downLog = logger.sub('secureConnect:' + upstream.servername + ':' + port + ':' + 'downstream')
         const upLog = logger.sub('secureConnect:' + upstream.servername + ':' + port + ':' + 'upstream')
         upstream.on('error', e => {
@@ -248,11 +253,12 @@ async function main() {
         // })
 
     };
+
     function SNICallback(port) {
         return {
             async SNICallback(servername, cb) {
 
-
+                servername = NAMES[servername] || servername;
                 logger.info("Initiate SNI...", { servername, thisHosts });
                 let key, cert;
                 if (thisHosts.indexOf(servername) !== -1) {
@@ -278,6 +284,7 @@ async function main() {
                     cert,
                 });
                 // ctx.someRandomData = 'foo';
+                logger.debug("SNI complete");
                 cb(null, ctx);
             }
         }
@@ -285,9 +292,13 @@ async function main() {
     function mkTlsServer(port, deaf) {
         !deaf && logger.info("Starting TLS server on port", port);
         const server = tls.createServer({
-            ...SNICallback(port)
+            ...SNICallback(port),
+            
         });
         server.on('secureConnection', socket => pipeTls(socket, port));
+        server.on('tlsClientError', err => {
+            logger.fatal("TLS Error:", err);
+        })
         !deaf && server.listen(port);
         return server;
 
