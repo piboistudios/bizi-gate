@@ -25,7 +25,7 @@ async function main() {
     /**@type {import('quick-lru').default<string, {key: Buffer, cert: Buffer}>} */
     const keypairs = new QuickLRU({ maxSize: MAX_REGISTRATIONS, maxAge: 1000 * 60 * 5 });
     const Endpoint = require('./models/gate.endpoint');
-    const host = process.env.THIS_IP;
+    const host = process.env.THIS_HOST.split(',')[0];
     const existingEndpoint = Endpoint.findOne({
         host
     });
